@@ -17,6 +17,9 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: anrapp-backend
+    volumes:
+      - ./backend:/app
+      - ./.env:/app/.env  
     expose:
       - "8080"
     environment:

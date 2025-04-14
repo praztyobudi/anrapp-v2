@@ -1,22 +1,17 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"backend/config"
+	"log"
 )
 
-func handler(w http.ResponseWriter, r *http.Request) {
-	// Menampilkan "Hello, World!" di browser
-	fmt.Fprintf(w, "Hello, World!")
-}
-
 func main() {
-	// Menyeting route dan handler
-	http.HandleFunc("/", handler)
+	db := config.ConnectDB()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Fatalf("Gagal menutup koneksi DB: %v", err)
+		}
+	}()
 
-	// Menjalankan server di port 8080
-	fmt.Println("Server started at http://localhost:8080")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
-		fmt.Println("Error starting server:", err)
-	}
+	// Lanjutkan logika aplikasi...
 }

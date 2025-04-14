@@ -1,0 +1,9 @@
+{
+    "name": "Go Dev",
+    "image": "golang:1.24",
+    "mounts": [
+      "source=${localWorkspaceFolder},target=/app,type=bind"
+    ],
+    "workspaceFolder": "/app"
+  }
+  
