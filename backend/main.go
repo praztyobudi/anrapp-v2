@@ -14,23 +14,18 @@ import (
 
 func main() {
 	db := config.ConnectDB()
-	defer func() {
-		if err := db.Close(); err != nil {
-			log.Fatalf("Gagal menutup koneksi DB: %v", err)
-		}
-	}()
 	defer db.Close()
 
 	r := gin.Default()
 
 	repo := repository.NewUserRepository(db)
 	uc := usecase.NewUserUsecase(repo)
-	h := handler.NewAuthHandler(uc)
+	auth := handler.NewAuthHandler(uc)
+	user := handler.NewUserHandler(uc)
 
-	route.Setup(r, h)
+	route.Setup(r, auth, user)
 
 	if err := r.Run(":8080"); err != nil {
 		log.Fatal(err)
 	}
-	// Lanjutkan logika aplikasi...
 }
