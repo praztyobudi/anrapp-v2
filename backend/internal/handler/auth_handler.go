@@ -17,8 +17,10 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	Message string `json:"message"`
-	UserID  int    `json:"user_id"`
+	Message    string `json:"message"`
+	UserID     int    `json:"user_id"`
+	Name       string `json:"name"`
+	Department string `json:"department"`
 }
 
 func NewAuthHandler(uc usecase.UserUsecase) *AuthHandler {
@@ -39,7 +41,9 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, LoginResponse{
-		Message: "Login successful",
-		UserID:  user.ID,
+		Message:    "Login successful",
+		UserID:     user.ID,
+		Name:       user.Department.Name,
+		Department: user.Department.Department,
 	})
 }
