@@ -2,15 +2,17 @@ package repository
 
 import (
 	"backend/internal/entity"
+	"context"
 	"database/sql"
 )
 
 type UserRepository interface {
-	FindByUsername(username string) (*entity.User, error)
-	CreateUser(user *entity.User) error
-	GetAllUsers() ([]*entity.User, error)
-	UpdateUser(user *entity.User) error
-	DeleteUser(userID int) error
+	FindByUsername(ctx context.Context, username string) (*entity.User, error)
+	FindDepartmentByName(ctx context.Context, name string) (*entity.Department, error)
+	CreateUser(ctx context.Context, user *entity.User) error
+	GetAllUsers(ctx context.Context) ([]*entity.User, error)
+	UpdateUser(ctx context.Context, user *entity.User) error
+	DeleteUser(ctx context.Context, userID int) error // Update signature di sini
 }
 
 type userRepository struct {
@@ -21,14 +23,15 @@ func NewUserRepository(db *sql.DB) UserRepository {
 	return &userRepository{db}
 }
 
-func (r *userRepository) FindByUsername(username string) (*entity.User, error) {
+// FindByUsername retrieves a user by username
+func (r *userRepository) FindByUsername(ctx context.Context, username string) (*entity.User, error) {
 	query := `
 		SELECT u.id, u.username, u.password, u.name, d.id, d.department
 		FROM users u
 		LEFT JOIN tb_department d ON u.department_id = d.id
 		WHERE u.username = $1
 	`
-	row := r.db.QueryRow(query, username)
+	row := r.db.QueryRowContext(ctx, query, username)
 
 	user := &entity.User{Department: &entity.Department{}}
 	err := row.Scan(
@@ -40,24 +43,40 @@ func (r *userRepository) FindByUsername(username string) (*entity.User, error) {
 		&user.Department.Department,
 	)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil // username not found
+		}
+		return nil, err // Other errors
 	}
 	return user, nil
 }
+func (r *userRepository) FindDepartmentByName(ctx context.Context, name string) (*entity.Department, error) {
+	query := "SELECT id, department FROM tb_department WHERE department = $1"
+	row := r.db.QueryRowContext(ctx, query, name)
 
-func (r *userRepository) CreateUser(user *entity.User) error {
+	var dept entity.Department
+	err := row.Scan(&dept.ID, &dept.Department)
+	if err != nil {
+		return nil, err
+	}
+	return &dept, nil
+}
+
+// CreateUser inserts a new user into the database
+func (r *userRepository) CreateUser(ctx context.Context, user *entity.User) error {
 	query := "INSERT INTO users (username, password, name, department_id) VALUES ($1, $2, $3, $4)"
-	_, err := r.db.Exec(query, user.Username, user.Password, user.Name, user.Department.ID)
+	_, err := r.db.ExecContext(ctx, query, user.Username, user.Password, user.Name, user.Department.ID)
 	return err
 }
 
-func (r *userRepository) GetAllUsers() ([]*entity.User, error) {
+// GetAllUsers retrieves all users from the database
+func (r *userRepository) GetAllUsers(ctx context.Context) ([]*entity.User, error) {
 	query := `
-		SELECT u.id, u.username, u.password, d.id, u.name, d.department
+		SELECT u.id, u.username, u.password, u.name, d.id, d.department
 		FROM users u
 		LEFT JOIN tb_department d ON u.department_id = d.id
 	`
-	rows, err := r.db.Query(query)
+	rows, err := r.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -66,23 +85,37 @@ func (r *userRepository) GetAllUsers() ([]*entity.User, error) {
 	var users []*entity.User
 	for rows.Next() {
 		user := &entity.User{Department: &entity.Department{}}
-		err := rows.Scan(&user.ID, &user.Username, &user.Password, &user.Department.ID, &user.Name, &user.Department.Department)
+		err := rows.Scan(
+			&user.ID,
+			&user.Username,
+			&user.Password,
+			&user.Name,
+			&user.Department.ID,
+			&user.Department.Department,
+		)
 		if err != nil {
 			return nil, err
 		}
 		users = append(users, user)
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
 	return users, nil
 }
 
-func (r *userRepository) UpdateUser(user *entity.User) error {
-	query := "UPDATE users SET password=$1, department_id=$2 WHERE username=$3"
-	_, err := r.db.Exec(query, user.Password, user.Department.ID, user.Username)
+// UpdateUser updates user information in the database
+func (r *userRepository) UpdateUser(ctx context.Context, user *entity.User) error {
+	query := "UPDATE users SET username = $1, password = $2, name = $3, department_id = $4 WHERE id = $5"
+	_, err := r.db.ExecContext(ctx, query, user.Username, user.Password, user.Name, user.Department.ID, user.ID)
 	return err
 }
 
-func (r *userRepository) DeleteUser(userID int) error {
-	query := "DELETE FROM users WHERE id=$1"
-	_, err := r.db.Exec(query, userID)
+// DeleteUser deletes a user from the database
+func (r *userRepository) DeleteUser(ctx context.Context, userID int) error { // Perbaikan di sini
+	query := "DELETE FROM users WHERE id = $1"
+	_, err := r.db.ExecContext(ctx, query, userID)
 	return err
 }

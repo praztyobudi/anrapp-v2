@@ -1,10 +1,9 @@
 package handler
 
 import (
-	"backend/internal/entity"
+	"backend/internal/dto"
 	"backend/internal/usecase"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +17,7 @@ func NewUserHandler(uc usecase.UserUsecase) *UserHandler {
 }
 
 func (h *UserHandler) GetAll(c *gin.Context) {
-	users, err := h.UserUsecase.GetUsers()
+	users, err := h.UserUsecase.GetUsers(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -28,39 +27,38 @@ func (h *UserHandler) GetAll(c *gin.Context) {
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
-	var req struct {
-		Username     string `json:"username"`
-		Password     string `json:"password"`
-		DepartmentID int    `json:"department_id"`
-	}
+	var req dto.UpdateUserRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	user := &entity.User{
-		Username: req.Username,
-		Password: req.Password,
-		Department: &entity.Department{
-			ID: req.DepartmentID,
-		},
-	}
-	if err := h.UserUsecase.Update(user); err != nil {
+
+	if err := h.UserUsecase.Update(c.Request.Context(), &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "User updated successfully"})
 }
 
+// handler/user_handler.go
 func (h *UserHandler) Delete(c *gin.Context) {
-	idStr := c.Param("id")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user id"})
+	var req struct {
+		ID int `json:"id"`
+	}
+
+	// Bind the JSON body to the struct
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
-	if err := h.UserUsecase.Delete(id); err != nil {
+
+	// Call the usecase to delete the user by ID
+	if err := h.UserUsecase.Delete(c.Request.Context(), req.ID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+
+	// Send success response
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted successfully"})
 }

@@ -11,5 +11,5 @@ func Setup(router *gin.Engine, authHandler *handler.AuthHandler, userHandler *ha
 	router.POST("/register", authHandler.Register)
 	router.GET("/users", userHandler.GetAll)
 	router.PUT("/users", userHandler.Update)
-	router.DELETE("/users/:id", userHandler.Delete)
+	router.DELETE("/users/delete", userHandler.Delete)
 }

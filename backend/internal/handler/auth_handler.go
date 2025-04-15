@@ -1,7 +1,7 @@
-// handler/auth_handler.go
 package handler
 
 import (
+	"backend/internal/dto"
 	"backend/internal/entity"
 	"backend/internal/usecase"
 	"net/http"
@@ -29,13 +29,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	user, err := h.UserUsecase.Login(req.Username, req.Password)
+	// Perbaikan: kirim context
+	user, err := h.UserUsecase.Login(c.Request.Context(), req.Username, req.Password)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Bikin manual versi custom response-nya
+	// Manual custom response
 	data := map[string]interface{}{
 		"id":         user.ID,
 		"name":       user.Name,
@@ -52,28 +53,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 // Register handler
 func (h *AuthHandler) Register(c *gin.Context) {
-	var req struct {
-		Username     string `json:"username"`
-		Password     string `json:"password"`
-		Name         string `json:"name"`
-		DepartmentID int    `json:"department_id"`
-	}
-
+	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
 		return
 	}
 
-	user := &entity.User{
-		Username: req.Username,
-		Password: req.Password,
-		Name:     req.Name,
-		Department: &entity.Department{
-			ID: req.DepartmentID,
-		},
-	}
-
-	if err := h.UserUsecase.Register(user); err != nil {
+	if err := h.UserUsecase.Register(c.Request.Context(), &req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

@@ -61,6 +61,15 @@ services:
     depends_on:
       - pgdata
 
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    ports:
+      - "8081:8080"
+    networks:
+      - appnet
+    restart: always
+
 networks:
   appnet:
     driver: bridge
