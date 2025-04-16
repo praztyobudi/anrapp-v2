@@ -1,0 +1,18 @@
+# .air.toml
+
+# Root direktori project (default ".")
+root = "."
+
+# Direktori sementara untuk binary
+tmp_dir = "tmp"
+
+# CMD yang digunakan untuk build aplikasi Go
+[build]
+  cmd = "go build -o ./tmp/main ."   # binary hasil build disimpan di ./tmp/main
+  bin = "tmp/main"                   # jalankan file ini
+  include_ext = ["go", "tpl", "tmpl", "html"] # file yang dipantau
+  exclude_dir = ["vendor", "tmp", "node_modules"] # folder yang diabaikan
+  exclude_file = []                  # bisa abaikan file tertentu
+  delay = 1000                       # delay 1 detik setelah perubahan
+  stop_on_error = true              # jika build gagal, tidak akan run
+  log = "debug"                      # bisa "info", "debug", dll

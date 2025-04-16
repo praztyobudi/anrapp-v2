@@ -2,8 +2,8 @@ package handler
 
 import (
 	"backend/internal/dto"
-	"backend/internal/entity"
 	"backend/internal/usecase"
+	"backend/utils"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -36,6 +36,18 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
+	// Generate token
+	token, err := utils.GenerateToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate token"})
+		return
+	}
+
+	refreshToken, err := utils.GenerateRefreshToken(user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate refresh token"})
+		return
+	}
 	// Manual custom response
 	data := map[string]interface{}{
 		"id":         user.ID,
@@ -43,12 +55,43 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"department": user.Department.Department,
 	}
 
-	response := entity.LoginResponse{
-		Message: "login successful",
-		Data:    data,
+	response := dto.LoginResponse{
+		Message:      "login successful",
+		Token:        token,
+		RefreshToken: refreshToken,
+		Data:         data,
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+// RefreshToken handler
+func (h *AuthHandler) Refresh(c *gin.Context) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid input"})
+		return
+	}
+
+	claims, err := utils.ValidateRefreshToken(req.RefreshToken)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid or expired refresh token"})
+		return
+	}
+
+	// Buat access token baru
+	newToken, err := utils.GenerateToken(claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to generate access token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"access_token": newToken,
+	})
 }
 
 // Register handler
